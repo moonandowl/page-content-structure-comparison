@@ -71,6 +71,17 @@ h1 {
     resize: vertical;
 }
 
+.field input[type="file"] {
+    padding: 0.4rem 0;
+}
+
+.field .hint {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
 .field input:focus,
 .field textarea:focus {
     outline: none;

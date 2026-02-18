@@ -16,6 +16,7 @@ load_dotenv()
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+DATA_DIR = PROJECT_ROOT / "data"
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -79,6 +80,13 @@ def run():
     config["procedure"] = procedure
     config["cities"] = cities
     config["num_results"] = num_results
+
+    # Handle Ahrefs file upload
+    ahrefs_file = request.files.get("ahrefs_file")
+    if ahrefs_file and ahrefs_file.filename and ahrefs_file.filename.lower().endswith(".csv"):
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        ahrefs_path = DATA_DIR / "ahrefs_batch.csv"
+        ahrefs_file.save(str(ahrefs_path))
 
     result = run_pipeline_with_config(config)
 
