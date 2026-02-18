@@ -13,10 +13,33 @@
             <p class="subtitle">Your competitive analysis is complete.</p>
         </header>
 
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
         <div class="results-box">
-            <p>Download your Excel report:</p>
+            <p><strong>Step 1:</strong> Download your Excel report:</p>
             <a href="{{ url_for('download', filename=filename) }}" class="btn btn-download">{{ filename }}</a>
         </div>
+
+        {% if urls %}
+        <div class="ahrefs-section">
+            <h2>Step 2: Add Ahrefs authority data (optional)</h2>
+            <p>Paste these URLs into <a href="https://ahrefs.com/batch-analysis" target="_blank" rel="noopener">Ahrefs Batch Analysis</a>, run the analysis, export the CSV, then upload it below.</p>
+            <div class="urls-box">
+                <textarea readonly rows="6">{{ urls | join('\n') }}</textarea>
+                <button type="button" class="btn btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy URLs</button>
+            </div>
+            <form action="{{ url_for('merge_ahrefs') }}" method="POST" enctype="multipart/form-data" class="ahrefs-form">
+                <input type="hidden" name="filename" value="{{ filename }}">
+                <div class="field">
+                    <label for="ahrefs_file">Upload Ahrefs export (ahrefs_batch.csv)</label>
+                    <input type="file" id="ahrefs_file" name="ahrefs_file" accept=".csv" required>
+                </div>
+                <button type="submit" class="btn">Merge Ahrefs & Rebuild Report</button>
+            </form>
+        </div>
+        {% endif %}
 
         <p><a href="{{ url_for('index') }}" class="back-link">← Run another analysis</a></p>
     </div>

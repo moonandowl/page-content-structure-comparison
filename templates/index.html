@@ -17,7 +17,7 @@
         <div class="error">{{ error }}</div>
         {% endif %}
 
-        <form action="{{ url_for('run') }}" method="POST" class="form" enctype="multipart/form-data">
+        <form action="{{ url_for('run') }}" method="POST" class="form">
             <div class="field">
                 <label for="procedure">Procedure</label>
                 <input type="text" id="procedure" name="procedure" value="{{ procedure }}" placeholder="e.g. LASIK, RLE, PRK, Cataract" required>
@@ -33,17 +33,11 @@
                 <input type="number" id="num_results" name="num_results" value="{{ num_results }}" min="1" max="10">
             </div>
 
-            <div class="field">
-                <label for="ahrefs_file">Ahrefs Batch File (optional)</label>
-                <input type="file" id="ahrefs_file" name="ahrefs_file" accept=".csv">
-                <span class="hint">Export from Ahrefs Batch Analysis to add Domain Rating, backlinks, and traffic data.</span>
-            </div>
-
             <button type="submit" class="btn">Run Analysis</button>
         </form>
 
         <footer>
-            <p>SerpAPI key must be set in your environment. Upload Ahrefs CSV above for authority metrics.</p>
+            <p>SerpAPI key must be set in your environment.</p>
         </footer>
     </div>
 </body>

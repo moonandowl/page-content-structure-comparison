@@ -81,13 +81,6 @@ def run():
     config["cities"] = cities
     config["num_results"] = num_results
 
-    # Handle Ahrefs file upload
-    ahrefs_file = request.files.get("ahrefs_file")
-    if ahrefs_file and ahrefs_file.filename and ahrefs_file.filename.lower().endswith(".csv"):
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        ahrefs_path = DATA_DIR / "ahrefs_batch.csv"
-        ahrefs_file.save(str(ahrefs_path))
-
     result = run_pipeline_with_config(config)
 
     if not result["success"]:
@@ -103,13 +96,57 @@ def run():
     return redirect(url_for("results", filename=result["output_filename"]))
 
 
+def _get_urls_from_last_run():
+    """Get URLs from the most recent run for Ahrefs Step 2."""
+    merged_path = DATA_DIR / "merged_data.json"
+    if not merged_path.exists():
+        return []
+    try:
+        with open(merged_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return [p.get("url", "") for p in data.get("pages", []) if p.get("url")]
+    except Exception:
+        return []
+
+
 @app.route("/results/<filename>")
 def results(filename):
-    """Show results summary and download link."""
+    """Show results summary, download link, and Step 2 Ahrefs upload."""
     output_path = OUTPUTS_DIR / filename
     if not output_path.exists():
         return "Report not found.", 404
-    return render_template("results.html", filename=filename)
+    urls = _get_urls_from_last_run()
+    return render_template("results.html", filename=filename, urls=urls)
+
+
+@app.route("/merge-ahrefs", methods=["POST"])
+def merge_ahrefs():
+    """Step 2: Merge uploaded Ahrefs CSV and rebuild report."""
+    ahrefs_file = request.files.get("ahrefs_file")
+    if not ahrefs_file or not ahrefs_file.filename or not ahrefs_file.filename.lower().endswith(".csv"):
+        return render_template(
+            "results.html",
+            filename=request.form.get("filename", ""),
+            urls=_get_urls_from_last_run(),
+            error="Please upload an Ahrefs Batch Analysis CSV file.",
+        ), 400
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ahrefs_path = DATA_DIR / "ahrefs_batch.csv"
+    ahrefs_file.save(str(ahrefs_path))
+
+    config = load_config()
+    result = run_pipeline_with_config(config, skip_scrape=True, run_id="ahrefs")
+
+    if not result["success"]:
+        return render_template(
+            "results.html",
+            filename=request.form.get("filename", ""),
+            urls=_get_urls_from_last_run(),
+            error=result.get("error", "Merge failed."),
+        ), 400
+
+    return redirect(url_for("results", filename=result["output_filename"]))
 
 
 @app.route("/download/<filename>")
