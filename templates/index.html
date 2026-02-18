@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Structure Comparison Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Page Structure Comparison Tool</h1>
+            <p class="subtitle">Competitive page analysis for medical procedure SEO</p>
+        </header>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form action="{{ url_for('run') }}" method="POST" class="form">
+            <div class="field">
+                <label for="procedure">Procedure</label>
+                <input type="text" id="procedure" name="procedure" value="{{ procedure }}" placeholder="e.g. LASIK, RLE, PRK, Cataract" required>
+            </div>
+
+            <div class="field">
+                <label for="cities">Cities (one per line, optional: City, State)</label>
+                <textarea id="cities" name="cities" rows="5" placeholder="Dallas, Texas&#10;Chicago, Illinois&#10;Los Angeles">{{ cities }}</textarea>
+            </div>
+
+            <div class="field">
+                <label for="num_results">Results per city</label>
+                <input type="number" id="num_results" name="num_results" value="{{ num_results }}" min="1" max="10">
+            </div>
+
+            <button type="submit" class="btn">Run Analysis</button>
+        </form>
+
+        <footer>
+            <p>Add your SerpAPI key to <code>.env</code> or environment variables. For Ahrefs data, drop <code>ahrefs_batch.csv</code> into the data folder.</p>
+        </footer>
+    </div>
+</body>
+</html>

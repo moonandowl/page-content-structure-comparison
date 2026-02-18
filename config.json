@@ -1,0 +1,54 @@
+{
+  "procedure": "LASIK",
+  "cities": [
+    {
+      "city": "Dallas",
+      "state": "Texas",
+      "country": "United States"
+    },
+    {
+      "city": "Chicago",
+      "state": "Illinois",
+      "country": "United States"
+    }
+  ],
+  "num_results": 3,
+  "technology_keywords": [
+    "iDesign",
+    "Contoura",
+    "SMILE",
+    "WaveLight",
+    "VISX",
+    "iLASIK",
+    "CustomVue",
+    "Ziemer",
+    "ALLEGRETTO",
+    "EX500",
+    "FS200",
+    "LDV"
+  ],
+  "homepage_handling": "extract_section",
+  "flag_homepages": true,
+  "page_classification": {
+    "geo_page_signals": [
+      "services we offer",
+      "procedures available",
+      "our location",
+      "visit us in",
+      "serving patients in",
+      "all services"
+    ],
+    "procedure_location_signals": [
+      "how lasik works",
+      "am i a candidate",
+      "lasik cost",
+      "recovery after lasik",
+      "schedule a consultation"
+    ],
+    "location_folder_patterns": [
+      "/locations/",
+      "/offices/",
+      "/clinics/"
+    ]
+  }
+}

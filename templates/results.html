@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Ready — Page Structure Comparison Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Report ready</h1>
+            <p class="subtitle">Your competitive analysis is complete.</p>
+        </header>
+
+        <div class="results-box">
+            <p>Download your Excel report:</p>
+            <a href="{{ url_for('download', filename=filename) }}" class="btn btn-download">{{ filename }}</a>
+        </div>
+
+        <p><a href="{{ url_for('index') }}" class="back-link">← Run another analysis</a></p>
+    </div>
+</body>
+</html>
