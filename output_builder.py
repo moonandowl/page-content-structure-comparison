@@ -163,6 +163,22 @@ def build_excel(
             ws2.cell(row=i, column=len(q_labels) + 2, value=consensus[pos - 1])
     ws2.freeze_panes = "B2"
 
+    # --- Tab 2b: Section Word Counts ---
+    ws_swc = wb.create_sheet("Section Word Counts")
+    swc_headers = ["Page", "Position", "H2 Text", "Word Count"]
+    for c, h in enumerate(swc_headers, 1):
+        ws_swc.cell(row=1, column=c, value=h).font = Font(bold=True)
+    row_num = 2
+    for p in qualifying:
+        page_label = _page_label(p)
+        for sec in p.get("section_word_counts", []):
+            ws_swc.cell(row=row_num, column=1, value=page_label)
+            ws_swc.cell(row=row_num, column=2, value=sec.get("position", ""))
+            ws_swc.cell(row=row_num, column=3, value=sec.get("h2_text", ""))
+            ws_swc.cell(row=row_num, column=4, value=sec.get("word_count", 0))
+            row_num += 1
+    ws_swc.freeze_panes = "B2"
+
     # --- Tab 3: Authority Profile ---
     ws3 = wb.create_sheet("Authority Profile")
     auth_headers = [

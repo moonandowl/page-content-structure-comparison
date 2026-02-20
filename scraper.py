@@ -389,6 +389,28 @@ def _extract_structure(soup: BeautifulSoup) -> dict:
     return {"h1": h1_text, "h2s": h2s, "h3s": [h.get_text(strip=True) for h in soup.find_all("h3")]}
 
 
+def _extract_section_word_counts(soup: BeautifulSoup) -> List[dict]:
+    """
+    For each H2, extract text content until the next H2 and count words.
+    Returns list of {position: int, h2_text: str, word_count: int}.
+    """
+    sections = []
+    for i, h2 in enumerate(soup.find_all("h2")):
+        h2_text = h2.get_text(strip=True)
+        content_parts = [h2_text]
+        for sib in h2.find_next_siblings():
+            if sib.name == "h2":
+                break
+            content_parts.append(sib.get_text(separator=" ", strip=True))
+        combined = " ".join(content_parts)
+        sections.append({
+            "position": i,
+            "h2_text": h2_text,
+            "word_count": _word_count(combined),
+        })
+    return sections
+
+
 def _extract_procedure_section(soup: BeautifulSoup, procedure: str) -> Optional[dict]:
     """
     For homepages: find procedure-specific content block.
@@ -426,6 +448,7 @@ def scrape_single_url(
         "error": None,
         "js_rendering_flagged": False,
         "structure": {},
+        "section_word_counts": [],
         "above_fold_mobile": {},
         "content_elements": {},
         "internal_links": [],
@@ -458,6 +481,7 @@ def scrape_single_url(
         result["js_rendering_flagged"] = True
 
     result["structure"] = _extract_structure(soup)
+    result["section_word_counts"] = _extract_section_word_counts(soup)
     result["above_fold_mobile"] = _extract_above_fold_mobile(soup, visible_text)
     result["content_elements"] = _extract_content_elements(soup, visible_text, tech_keywords, url)
     result["internal_links"] = _extract_internal_links(soup, url)
