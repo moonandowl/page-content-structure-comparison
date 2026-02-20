@@ -30,7 +30,7 @@
                 <textarea readonly rows="6">{{ urls | join('\n') }}</textarea>
                 <button type="button" class="btn btn-small" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy URLs</button>
             </div>
-            <form action="{{ url_for('merge_ahrefs') }}" method="POST" enctype="multipart/form-data" class="ahrefs-form">
+            <form action="{{ url_for('merge_ahrefs') }}" method="POST" enctype="multipart/form-data" class="ahrefs-form" data-loading-message="Merging Ahrefs data and rebuilding report...">
                 <input type="hidden" name="filename" value="{{ filename }}">
                 <div class="field">
                     <label for="ahrefs_file">Upload Ahrefs export (ahrefs_batch.csv)</label>
@@ -43,5 +43,21 @@
 
         <p><a href="{{ url_for('index') }}" class="back-link">← Run another analysis</a></p>
     </div>
+
+    <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p class="loading-message" id="loading-message">Processing...</p>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('form[data-loading-message]')?.addEventListener('submit', function() {
+            var msg = this.getAttribute('data-loading-message');
+            document.getElementById('loading-message').textContent = msg || 'Processing...';
+            document.getElementById('loading-overlay').classList.add('visible');
+            document.getElementById('loading-overlay').setAttribute('aria-hidden', 'false');
+        });
+    </script>
 </body>
 </html>
