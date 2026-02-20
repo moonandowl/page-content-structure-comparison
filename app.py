@@ -1,10 +1,12 @@
 """
 Page Structure Comparison Tool - Web Interface
 Simple Flask app for running the competitive analysis pipeline.
+Uses background jobs to avoid request timeouts for long-running analysis.
 """
 
 import json
 import os
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,6 +19,50 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.resolve()
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 DATA_DIR = PROJECT_ROOT / "data"
+JOB_STATUS_PATH = DATA_DIR / "job_status.json"
+
+
+def _get_job_status() -> dict:
+    """Read current job status from file."""
+    if not JOB_STATUS_PATH.exists():
+        return {"status": "idle", "filename": None, "error": None}
+    try:
+        with open(JOB_STATUS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"status": "idle", "filename": None, "error": None}
+
+
+def _set_job_status(status: str, filename: str = None, error: str = None) -> None:
+    """Write job status to file."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(JOB_STATUS_PATH, "w", encoding="utf-8") as f:
+        json.dump({"status": status, "filename": filename, "error": error}, f)
+
+
+def _run_analysis_background(config: dict) -> None:
+    """Run pipeline in background thread."""
+    try:
+        result = run_pipeline_with_config(config)
+        if result["success"]:
+            _set_job_status("completed", filename=result["output_filename"])
+        else:
+            _set_job_status("failed", error=result.get("error", "Unknown error"))
+    except Exception as e:
+        _set_job_status("failed", error=str(e))
+
+
+def _run_merge_background(config: dict) -> None:
+    """Run Ahrefs merge in background thread."""
+    try:
+        result = run_pipeline_with_config(config, skip_scrape=True, run_id="ahrefs")
+        if result["success"]:
+            _set_job_status("completed", filename=result["output_filename"])
+        else:
+            _set_job_status("failed", error=result.get("error", "Unknown error"))
+    except Exception as e:
+        _set_job_status("failed", error=str(e))
+
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -61,7 +107,7 @@ def index():
 
 @app.route("/run", methods=["POST"])
 def run():
-    """Run the pipeline and redirect to results."""
+    """Start pipeline in background and redirect to processing page."""
     procedure = request.form.get("procedure", "LASIK").strip() or "LASIK"
     cities_text = request.form.get("cities", "").strip()
     num_results = int(request.form.get("num_results", 3) or 3)
@@ -75,25 +121,28 @@ def run():
             error="Enter at least one city.",
         ), 400
 
+    job = _get_job_status()
+    if job["status"] == "running":
+        return render_template(
+            "index.html",
+            procedure=procedure,
+            cities=cities_text,
+            num_results=num_results,
+            error="A job is already running. Please wait for it to finish.",
+        ), 400
+
     cities = parse_cities_text(cities_text)
     config = load_config()
     config["procedure"] = procedure
     config["cities"] = cities
     config["num_results"] = num_results
 
-    result = run_pipeline_with_config(config)
+    _set_job_status("running")
+    thread = threading.Thread(target=_run_analysis_background, args=(config,))
+    thread.daemon = True
+    thread.start()
 
-    if not result["success"]:
-        return render_template(
-            "index.html",
-            procedure=procedure,
-            cities=cities_text,
-            num_results=num_results,
-            error=result.get("error", "Pipeline failed."),
-        ), 400
-
-    # Redirect to results page with filename
-    return redirect(url_for("results", filename=result["output_filename"]))
+    return redirect(url_for("processing"))
 
 
 def _get_urls_from_last_run():
@@ -109,6 +158,18 @@ def _get_urls_from_last_run():
         return []
 
 
+@app.route("/processing")
+def processing():
+    """Show processing page that polls for job completion."""
+    return render_template("processing.html")
+
+
+@app.route("/job-status")
+def job_status():
+    """Return current job status as JSON for polling."""
+    return _get_job_status()
+
+
 @app.route("/results/<filename>")
 def results(filename):
     """Show results summary, download link, and Step 2 Ahrefs upload."""
@@ -121,7 +182,7 @@ def results(filename):
 
 @app.route("/merge-ahrefs", methods=["POST"])
 def merge_ahrefs():
-    """Step 2: Merge uploaded Ahrefs CSV and rebuild report."""
+    """Step 2: Merge uploaded Ahrefs CSV and rebuild report (background)."""
     ahrefs_file = request.files.get("ahrefs_file")
     if not ahrefs_file or not ahrefs_file.filename or not ahrefs_file.filename.lower().endswith(".csv"):
         return render_template(
@@ -131,22 +192,26 @@ def merge_ahrefs():
             error="Please upload an Ahrefs Batch Analysis CSV file.",
         ), 400
 
+    job = _get_job_status()
+    if job["status"] == "running":
+        return render_template(
+            "results.html",
+            filename=request.form.get("filename", ""),
+            urls=_get_urls_from_last_run(),
+            error="A job is already running. Please wait for it to finish.",
+        ), 400
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ahrefs_path = DATA_DIR / "ahrefs_batch.csv"
     ahrefs_file.save(str(ahrefs_path))
 
     config = load_config()
-    result = run_pipeline_with_config(config, skip_scrape=True, run_id="ahrefs")
+    _set_job_status("running")
+    thread = threading.Thread(target=_run_merge_background, args=(config,))
+    thread.daemon = True
+    thread.start()
 
-    if not result["success"]:
-        return render_template(
-            "results.html",
-            filename=request.form.get("filename", ""),
-            urls=_get_urls_from_last_run(),
-            error=result.get("error", "Merge failed."),
-        ), 400
-
-    return redirect(url_for("results", filename=result["output_filename"]))
+    return redirect(url_for("processing"))
 
 
 @app.route("/download/<filename>")

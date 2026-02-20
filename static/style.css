@@ -227,3 +227,18 @@ footer code {
     font-size: 0.95rem;
     color: #333;
 }
+
+.processing-box {
+    text-align: center;
+    padding: 2rem;
+}
+
+.processing-box .spinner {
+    margin: 0 auto 1rem auto;
+}
+
+.processing-hint {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
+}

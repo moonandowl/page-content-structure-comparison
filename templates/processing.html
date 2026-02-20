@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing — Page Structure Comparison Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Processing</h1>
+            <p class="subtitle">Your analysis is running in the background.</p>
+        </header>
+
+        <div class="processing-box">
+            <div class="spinner"></div>
+            <p class="processing-message" id="status-message">Fetching SERP results and scraping pages...</p>
+            <p class="processing-hint">This may take 2–4 minutes for 10 cities. Please keep this page open.</p>
+        </div>
+
+        <div id="error-box" class="error" style="display: none;">
+            <p id="error-message"></p>
+            <p><a href="{{ url_for('index') }}" class="back-link">← Try again</a></p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var pollInterval = 3000;
+            var statusMsg = document.getElementById('status-message');
+            var errorBox = document.getElementById('error-box');
+            var errorMsg = document.getElementById('error-message');
+
+            function poll() {
+                fetch('{{ url_for("job_status") }}')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.status === 'completed') {
+                            window.location.href = '{{ url_for("results", filename="PLACEHOLDER") }}'.replace('PLACEHOLDER', data.filename);
+                            return;
+                        }
+                        if (data.status === 'failed') {
+                            document.querySelector('.processing-box').style.display = 'none';
+                            errorMsg.textContent = data.error || 'Job failed.';
+                            errorBox.style.display = 'block';
+                            return;
+                        }
+                        setTimeout(poll, pollInterval);
+                    })
+                    .catch(function() {
+                        setTimeout(poll, pollInterval);
+                    });
+            }
+            setTimeout(poll, pollInterval);
+        })();
+    </script>
+</body>
+</html>
