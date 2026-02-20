@@ -31,6 +31,13 @@ DIAGNOSIS_FILLS = {
     "Competitive": GREEN_FILL,
 }
 
+# Ranking driver colors ( Authority-driven = likely DA/PA, not content )
+RANKING_DRIVER_FILLS = {
+    "Authority-driven": PatternFill(start_color="FFF9C4", end_color="FFF9C4", fill_type="solid"),  # light yellow
+    "Content-driven": PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"),  # light green
+    "Authority + Content": PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid"),  # light blue
+}
+
 
 # Section type taxonomy for LLM classification (Category, Section Type, Example Headings)
 SECTION_TYPE_TAXONOMY = [
@@ -254,7 +261,8 @@ def build_excel(
     auth_headers = [
         "City", "Position", "URL", "Page Type", "Classification Confidence",
         "Domain Rating", "URL Rating", "Referring Domains", "Backlinks",
-        "Organic Traffic", "Content Richness Score", "Diagnosis", "Notes",
+        "Organic Traffic", "Content Richness Score", "Diagnosis",
+        "Ranking Driver", "Ranking Driver Note", "Notes",
     ]
     for c, h in enumerate(auth_headers, 1):
         ws3.cell(row=1, column=c, value=h).font = Font(bold=True)
@@ -280,6 +288,8 @@ def build_excel(
             str(p.get("organic_traffic", "")),
             p.get("content_richness_score", ""),
             p.get("diagnosis", ""),
+            p.get("ranking_driver", ""),
+            p.get("ranking_driver_note", "")[:120],
             notes_str,
         ]
         for c, val in enumerate(row_data, 1):
@@ -288,6 +298,10 @@ def build_excel(
                 diag = p.get("diagnosis", "")
                 if diag in DIAGNOSIS_FILLS:
                     cell.fill = DIAGNOSIS_FILLS[diag]
+            if c == 13:  # Ranking Driver column
+                drv = p.get("ranking_driver", "")
+                if drv in RANKING_DRIVER_FILLS:
+                    cell.fill = RANKING_DRIVER_FILLS[drv]
     ws3.freeze_panes = "B2"
 
     # --- Tab 4: Above The Fold — Mobile ---

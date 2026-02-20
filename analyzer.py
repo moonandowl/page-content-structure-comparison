@@ -225,6 +225,70 @@ def _safe_dr(page: dict) -> float:
     return 0
 
 
+def _safe_ur(page: dict) -> float:
+    """Get numeric URL Rating for comparison."""
+    ur = page.get("url_rating", "")
+    if isinstance(ur, (int, float)):
+        return float(ur)
+    if isinstance(ur, str):
+        m = re.search(r"(\d+(?:\.\d+)?)", str(ur))
+        return float(m.group(1)) if m else 0
+    return 0
+
+
+def _assess_ranking_driver(page: dict) -> tuple[str, str]:
+    """
+    Determine if page ranking is likely driven by authority (DA/PA) vs content.
+    Returns (ranking_driver, ranking_driver_note).
+    """
+    dr = _safe_dr(page)
+    ur = _safe_ur(page)
+    score = page.get("content_richness_score", 0)
+    page_type = page.get("page_type", "")
+    is_pos1 = page.get("is_position_1", False)
+
+    # Homepage or Geo Page at position 1 — almost always authority-driven
+    if is_pos1 and page_type in ("Homepage", "Geo Page"):
+        return (
+            "Authority-driven",
+            "Position 1 Homepage/Geo page — domain authority likely primary ranking factor; content optimization alone will not outrank",
+        )
+
+    # Content Gap: high authority, weak content
+    if dr > 40 and score < 5:
+        return (
+            "Authority-driven",
+            f"High DR ({dr}), low content score ({score}) — ranking on domain/URL authority; beatable with stronger content",
+        )
+
+    # High UR with low content (page-level authority carrying weak page)
+    if ur > 30 and score < 5:
+        return (
+            "Authority-driven",
+            f"High URL Rating ({ur}), low content ({score}) — page authority outweighs content; improve content to compete",
+        )
+
+    # Authority Gap: strong content, weak authority
+    if dr < 40 and score > 6:
+        return (
+            "Content-driven",
+            f"Low DR ({dr}), strong content ({score}) — ranking on content quality; needs more backlinks to compete with high-DR players",
+        )
+
+    # Competitive: both strong
+    if dr > 40 and score > 6:
+        return (
+            "Authority + Content",
+            f"High DR ({dr}), strong content ({score}) — benchmark to beat; requires both better content and link building",
+        )
+
+    # Unclear
+    return (
+        "Unclear",
+        f"DR {dr}, content {score} — manual review recommended; unclear why it ranks",
+    )
+
+
 def _compute_content_richness_score(page: dict) -> float:
     """Compute Content Richness Score 0-10 from content elements."""
     ce = page.get("content_elements", {})
@@ -309,11 +373,14 @@ def run_analysis(merged_data: dict, config: dict) -> dict:
         "consensus_order": [],
     }
 
-    # Add Content Richness and Diagnosis to each page
+    # Add Content Richness, Diagnosis, and Ranking Driver assessment to each page
     for p in pages:
         p["content_richness_score"] = _compute_content_richness_score(p)
         dr = _safe_dr(p)
         p["diagnosis"] = _diagnose_page(dr, p["content_richness_score"])
+        driver, note = _assess_ranking_driver(p)
+        p["ranking_driver"] = driver
+        p["ranking_driver_note"] = note
 
     # Authority-driven: position 1 is Geo or Homepage
     for p in pages:
