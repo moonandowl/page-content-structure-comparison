@@ -32,6 +32,70 @@ DIAGNOSIS_FILLS = {
 }
 
 
+# Section type taxonomy for LLM classification (Category, Section Type, Example Headings)
+SECTION_TYPE_TAXONOMY = [
+    ("HERO / ABOVE THE FOLD", "Hero Section", "headline, subheadline, primary CTA, trust badge, background image"),
+    ("TRUST & CREDIBILITY", "Why Choose Us", "Why Choose TLC, Why Patients Choose, Why Get LASIK Here"),
+    ("TRUST & CREDIBILITY", "Surgeon Credentials / Meet the Surgeon", "surgeon bio cards, team overview"),
+    ("TRUST & CREDIBILITY", "Surgeon Biography", "individual surgeon pages"),
+    ("TRUST & CREDIBILITY", "Press / Media Mentions", "As Featured In, As Seen In"),
+    ("TRUST & CREDIBILITY", "Awards & Recognition / Trust Badges", ""),
+    ("TRUST & CREDIBILITY", "Brand Promise / Our Commitment", "Our LASIK Center Brand Promise, A New Standard"),
+    ("PROCEDURE EDUCATION", "What Is LASIK", "What Is LASIK?, What Is LASIK Eye Surgery?, How Does LASIK Work?"),
+    ("PROCEDURE EDUCATION", "How LASIK Works / The LASIK Procedure", "step-by-step procedure walkthrough"),
+    ("PROCEDURE EDUCATION", "LASIK Surgery Journey", "timeline or step-by-step patient journey"),
+    ("PROCEDURE EDUCATION", "What to Expect / Recovery", "What to Expect During LASIK Recovery, Your LASIK Procedure: What to Expect"),
+    ("PROCEDURE EDUCATION", "Is LASIK Safe? / Risks", "LASIK Surgery Risks, Is LASIK Eye Surgery Safe?"),
+    ("PROCEDURE EDUCATION", "LASIK Alternatives", "LASIK Alternatives, PRK vs LASIK, SMILE vs LASIK"),
+    ("PROCEDURE EDUCATION", "Refractive Errors We Treat", "nearsightedness, farsightedness, astigmatism"),
+    ("CANDIDACY", "Am I a Candidate", "Am I a Candidate?, Are You a LASIK Candidate?, Ideal Candidates for LASIK"),
+    ("CANDIDACY", "Candidacy Quiz / Self-Test CTA", "strongest differentiator"),
+    ("TECHNOLOGY", "Technology Section", "Our Technology and Why It Matters, LASIK Surgery Technology, At the Cutting Edge"),
+    ("TECHNOLOGY", "Specific Technology Callout", "iDesign, Contoura, WaveLight, ALLEGRETTO, SMILE, EX500"),
+    ("TECHNOLOGY", "Blade-Free / Bladeless LASIK", "all-laser approach"),
+    ("SOCIAL PROOF", "Testimonials Section", "text quotes"),
+    ("SOCIAL PROOF", "Video Testimonials Section", "video testimonials"),
+    ("SOCIAL PROOF", "Before & After Photos Section", ""),
+    ("SOCIAL PROOF", "Google Reviews Widget / Star Rating", ""),
+    ("SOCIAL PROOF", "Review Count Callout", "Over 3,000 5-Star Reviews"),
+    ("SOCIAL PROOF", "Outcome Statistics Section", "99% achieve 20/20, 100,000 procedures performed"),
+    ("COST & FINANCING", "Cost / Pricing Section", "How Much Does LASIK Cost?, What Is the Cost of LASIK?"),
+    ("COST & FINANCING", "Financing Options Section", "Financing Options Available, LASIK Surgery Financing Options"),
+    ("COST & FINANCING", "Insurance Section", "Does Insurance Cover LASIK?"),
+    ("COST & FINANCING", "Special Offer / Promotional", "$1,400 Off LASIK, Save $1,000, Share the Love with LASIK"),
+    ("FAQ", "FAQ Section", "Frequently Asked Questions, Your Vision Correction FAQs, TLC LASIK FAQs"),
+    ("ALTERNATIVES & RELATED PROCEDURES", "Vision Correction Options / Alternatives", "Vision Correction Treatments We Offer, Choosing the Right Procedure"),
+    ("ALTERNATIVES & RELATED PROCEDURES", "SMILE Pro Section", "standalone alternative procedure callout"),
+    ("ALTERNATIVES & RELATED PROCEDURES", "EVO ICL Section", "standalone alternative callout"),
+    ("ALTERNATIVES & RELATED PROCEDURES", "PRK Section", "callout or comparison"),
+    ("LOCATION & LOGISTICS", "Locations / Our Location", "Four Convenient Locations, Our Locations, Houston Location"),
+    ("LOCATION & LOGISTICS", "Hours of Operation Section", ""),
+    ("LOCATION & LOGISTICS", "Directions / Parking Section", ""),
+    ("LOCATION & LOGISTICS", "Traveling Patients Section", "patients who fly in for surgery"),
+    ("CONVERSION", "Schedule a Consultation CTA", "mid-page and end-of-page CTA blocks"),
+    ("CONVERSION", "Free Consultation Offer", "free, no obligation"),
+    ("CONVERSION", "Online Scheduling Widget", ""),
+    ("CONVERSION", "Live Chat Widget", ""),
+    ("SUPPORTING CONTENT", "Blog / Recent Posts Section", ""),
+    ("SUPPORTING CONTENT", "Related Links Section", ""),
+    ("SUPPORTING CONTENT", "Social Media / Instagram Feed", "Follow Us on Instagram, Follow Us on Our Social Platforms"),
+    ("SUPPORTING CONTENT", "Contact / Get in Touch", ""),
+]
+
+
+def _add_section_type_reference_sheet(wb) -> None:
+    """Add Section Type Reference sheet for LLM classification."""
+    ws = wb.create_sheet("Section Type Reference")
+    headers = ["Category", "Section Type", "Example Headings"]
+    for c, h in enumerate(headers, 1):
+        ws.cell(row=1, column=c, value=h).font = Font(bold=True)
+    for r, (cat, stype, examples) in enumerate(SECTION_TYPE_TAXONOMY, 2):
+        ws.cell(row=r, column=1, value=cat)
+        ws.cell(row=r, column=2, value=stype)
+        ws.cell(row=r, column=3, value=examples)
+    ws.freeze_panes = "A2"
+
+
 def _page_label(page: dict) -> str:
     """e.g. Dallas #1"""
     return f"{page.get('city', '')} #{page.get('position', '')}"
@@ -163,21 +227,27 @@ def build_excel(
             ws2.cell(row=i, column=len(q_labels) + 2, value=consensus[pos - 1])
     ws2.freeze_panes = "B2"
 
-    # --- Tab 2b: Section Word Counts ---
+    # --- Tab 2b: Section Word Counts (all pages including Homepages for LLM classification) ---
     ws_swc = wb.create_sheet("Section Word Counts")
-    swc_headers = ["Page", "Position", "H2 Text", "Word Count"]
+    swc_headers = ["Page", "Position", "H2 Text", "Word Count", "Context Snippet", "Page Type"]
     for c, h in enumerate(swc_headers, 1):
         ws_swc.cell(row=1, column=c, value=h).font = Font(bold=True)
     row_num = 2
-    for p in qualifying:
+    for p in pages:
         page_label = _page_label(p)
+        page_type = p.get("page_type", "")
         for sec in p.get("section_word_counts", []):
             ws_swc.cell(row=row_num, column=1, value=page_label)
             ws_swc.cell(row=row_num, column=2, value=sec.get("position", ""))
             ws_swc.cell(row=row_num, column=3, value=sec.get("h2_text", ""))
             ws_swc.cell(row=row_num, column=4, value=sec.get("word_count", 0))
+            ws_swc.cell(row=row_num, column=5, value=sec.get("context_snippet", ""))
+            ws_swc.cell(row=row_num, column=6, value=page_type)
             row_num += 1
     ws_swc.freeze_panes = "B2"
+
+    # --- Tab 2c: Section Type Reference (for LLM classification) ---
+    _add_section_type_reference_sheet(wb)
 
     # --- Tab 3: Authority Profile ---
     ws3 = wb.create_sheet("Authority Profile")

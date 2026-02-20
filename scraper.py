@@ -389,10 +389,14 @@ def _extract_structure(soup: BeautifulSoup) -> dict:
     return {"h1": h1_text, "h2s": h2s, "h3s": [h.get_text(strip=True) for h in soup.find_all("h3")]}
 
 
+SECTION_SNIPPET_LENGTH = 400  # chars of context for LLM section-type classification
+
+
 def _extract_section_word_counts(soup: BeautifulSoup) -> List[dict]:
     """
     For each H2, extract text content until the next H2 and count words.
-    Returns list of {position: int, h2_text: str, word_count: int}.
+    Includes a context snippet (heading + first N chars of content) for LLM section-type classification.
+    Returns list of {position: int, h2_text: str, word_count: int, context_snippet: str}.
     """
     sections = []
     for i, h2 in enumerate(soup.find_all("h2")):
@@ -402,11 +406,13 @@ def _extract_section_word_counts(soup: BeautifulSoup) -> List[dict]:
             if sib.name == "h2":
                 break
             content_parts.append(sib.get_text(separator=" ", strip=True))
-        combined = " ".join(content_parts)
+        combined = " ".join(str(p) for p in content_parts if p)
+        snippet = (combined[:SECTION_SNIPPET_LENGTH] + "…") if len(combined) > SECTION_SNIPPET_LENGTH else combined
         sections.append({
             "position": i,
             "h2_text": h2_text,
             "word_count": _word_count(combined),
+            "context_snippet": snippet.strip(),
         })
     return sections
 
