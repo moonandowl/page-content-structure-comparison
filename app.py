@@ -10,13 +10,15 @@ import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, send_file, url_for
+from flask import Flask, redirect, render_template, request, Response, send_file, url_for
 
 from main import load_config, run_pipeline_with_config
 
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
+AUTH_USERNAME = os.environ.get("AUTH_USERNAME")
+AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD")
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 DATA_DIR = PROJECT_ROOT / "data"
 JOB_STATUS_PATH = DATA_DIR / "job_status.json"
@@ -65,6 +67,21 @@ def _run_merge_background(config: dict) -> None:
 
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
+
+@app.before_request
+def require_auth():
+    """Require HTTP Basic Auth when AUTH_USERNAME and AUTH_PASSWORD are set."""
+    if not AUTH_USERNAME or not AUTH_PASSWORD:
+        return None
+    auth = request.authorization
+    if not auth or auth.username != AUTH_USERNAME or auth.password != AUTH_PASSWORD:
+        return Response(
+            "Authentication required",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Page Structure Comparison Tool"'},
+        )
+    return None
 
 
 def parse_cities_text(text: str) -> list[dict]:
